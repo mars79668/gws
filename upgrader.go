@@ -302,6 +302,7 @@ func (c *Server) RunListener(listener net.Listener) error {
 			if r, err := http.ReadRequest(br); err != nil {
 				c.OnError(conn, err)
 			} else {
+				r.RemoteAddr = conn.RemoteAddr().String()
 				c.OnRequest(conn, br, r)
 			}
 		}(netConn)
