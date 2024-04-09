@@ -11,6 +11,7 @@ import (
 func (c *Conn) checkMask(enabled bool) error {
 	// RFC6455: All frames sent from client to server have this bit set to 1.
 	if (c.isServer && !enabled) || (!c.isServer && enabled) {
+		fmt.Println("gws: invalid mask bit")
 		return internal.CloseProtocolError
 	}
 	return nil
@@ -20,12 +21,14 @@ func (c *Conn) checkMask(enabled bool) error {
 func (c *Conn) readControl() error {
 	//RFC6455:  Control frames themselves MUST NOT be fragmented.
 	if !c.fh.GetFIN() {
+		fmt.Println("gws: control frame fragmented")
 		return internal.CloseProtocolError
 	}
 
 	// RFC6455: All control frames MUST have a payload length of 125 bytes or fewer and MUST NOT be fragmented.
 	var n = c.fh.GetLengthCode()
 	if n > internal.ThresholdV1 {
+		fmt.Println("gws: control frame too large")
 		return internal.CloseProtocolError
 	}
 
@@ -53,6 +56,7 @@ func (c *Conn) readControl() error {
 		return c.emitClose(bytes.NewBuffer(payload))
 	default:
 		var err = fmt.Errorf("gws: unexpected opcode %d", opcode)
+		fmt.Println(err)
 		return internal.NewError(internal.CloseProtocolError, err)
 	}
 }
@@ -74,6 +78,7 @@ func (c *Conn) readMessage() error {
 	//      value, the receiving endpoint MUST _Fail the WebSocket
 	//      Connection_.
 	if !c.pd.Enabled && (c.fh.GetRSV1() || c.fh.GetRSV2() || c.fh.GetRSV3()) {
+		fmt.Println("gws: invalid RSV bits")
 		return internal.CloseProtocolError
 	}
 
@@ -103,6 +108,7 @@ func (c *Conn) readMessage() error {
 	}
 
 	if opcode != OpcodeContinuation && c.continuationFrame.initialized {
+		fmt.Println("gws: unexpected continuation frame")
 		return internal.CloseProtocolError
 	}
 
@@ -122,6 +128,7 @@ func (c *Conn) readMessage() error {
 	}
 
 	if !c.continuationFrame.initialized {
+		fmt.Println("gws: unexpected continuation frame")
 		return internal.CloseProtocolError
 	}
 
